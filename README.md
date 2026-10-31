@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Doctor Tracker Web
 
-## Getting Started
+Doctor Tracker Web is the frontend of a secure admin portal for managing doctors and their patients. Authenticated admins can create and browse doctors, manage the patients assigned to each doctor, and explore the data through server-side search, filters and pagination, plus a dashboard with interactive charts (totals, patients per doctor, date-wise trends). It talks to a standalone REST API built with Express and MongoDB.
 
-First, run the development server:
+- **Live site:** https://<your-app>.vercel.app
+- **Live API:** https://doctor-tracker-api-cnxs.onrender.com
+- **Backend repo:** https://github.com/Shimul-DIU/doctor-tracker-api
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+> The API runs on Render's free tier, so the first request after inactivity can take 30-50 seconds while the server wakes up.
+
+## Demo credentials
+
+| Email | Password |
+|---|---|
+| admin@doctortracker.com | Admin@12345 |
+
+## Tech stack
+
+Next.js (App Router) · TypeScript · Tailwind CSS · TanStack Query · Zustand · React Hook Form + Zod · Recharts · Axios
+
+## Setup guide
+
+**Prerequisites:** Node.js 20.19 or newer, and the backend API running locally or deployed.
+
+1. Clone the repository
+   ```bash
+   git clone https://github.com/Shimul-DIU/doctor-tracker-web.git
+   cd doctor-tracker-web
+   ```
+2. Install dependencies
+   ```bash
+   npm install
+   ```
+3. Create your environment file from the example
+   ```bash
+   cp .env.example .env.local
+   ```
+4. Set the API URL in `.env.local`
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:5000/api
+   ```
+5. Start the dev server
+   ```bash
+   npm run dev
+   ```
+6. Open http://localhost:3000 and sign in with the demo credentials.
+
+To run the backend locally, follow the setup guide in the [API repository](https://github.com/Shimul-DIU/doctor-tracker-api) (`npm run seed` creates the admin user and demo data).
+
+### Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the development server |
+| `npm run build` | Create a production build |
+| `npm start` | Run the production build |
+| `npm run lint` | Lint the code |
+
+## System architecture
+
+```mermaid
+flowchart LR
+    U[Browser] --> N[Next.js client - Vercel]
+    N -- "REST + Bearer JWT" --> A[Express API - Render]
+    A -- Mongoose --> M[(MongoDB Atlas)]
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Data flow**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. The admin signs in. The API verifies the credentials and returns a signed JWT.
+2. The token is stored in a persisted Zustand store. An Axios interceptor attaches it to every request, and a 401 response logs the user out and redirects to `/login`.
+3. Pages read data through TanStack Query hooks, which cache responses and refetch only when the query key changes.
+4. Search, filters and pagination are sent as query parameters. MongoDB does the work using text and compound indexes, and only one page of results returns to the browser.
+5. The dashboard calls a single stats endpoint that aggregates everything on the database side.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Frontend structure**
 
-## Learn More
+```
+src/
+├─ app/          routes (login, and a protected (app) group for dashboard, doctors, patients)
+├─ components/   AppShell, Providers, reusable ui/ pieces, feature components
+├─ hooks/        data-fetching hooks (React Query) and utilities
+├─ lib/          Axios instance and helpers
+├─ store/        Zustand auth store
+└─ types/        shared TypeScript types
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Technical decisions
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 1. TanStack Query for server state, Zustand only for auth
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Most state in this app is server data: lists, pages, filters and statistics. Putting it in Redux would mean writing actions, reducers and loading/error handling by hand. TanStack Query provides caching, request deduplication, background refetching and cache invalidation after mutations (for example, adding a patient refreshes the doctor's patient list and the dashboard). That also avoids unnecessary re-renders. The only real client state is the auth session, which is small enough for a minimal Zustand store with persistence, so Redux would add boilerplate without a benefit.
 
-## Deploy on Vercel
+### 2. Bearer JWT instead of an httpOnly cookie
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The frontend (Vercel) and the API (Render) live on different domains. Cross-site cookies need `SameSite=None; Secure` and are blocked by default in several browsers, including Safari, which makes sessions unreliable. A JWT sent in the `Authorization` header works the same everywhere. The trade-off is that a token in `localStorage` is exposed if an XSS bug exists. This is mitigated by React's output escaping, no `dangerouslySetInnerHTML`, a short token lifetime (1 day) and server-side validation. With a shared parent domain, httpOnly cookies would be the better choice.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Screenshots
+
+### Desktop
+
+| Login | Dashboard |
+|---|---|
+| ![Login](public/screenshots/login-desktop.png) | ![Dashboard](public/screenshots/dashboard-desktop.png) |
+
+| Doctors | Patients |
+|---|---|
+| ![Doctors](public/screenshots/doctors-desktop.png) | ![Patients](public/screenshots/patients-desktop.png) |
+
+### Mobile
+
+| Dashboard | Doctors | Menu |
+|---|---|---|
+| ![Dashboard](public/screenshots/dashboard-mobile.png) | ![Doctors](public/screenshots/doctors-mobile.png) | ![Menu](public/screenshots/menu-mobile.png) |
+
+## Deployment
+
+- **Frontend:** Vercel. Set `NEXT_PUBLIC_API_URL` to the live API URL (ending in `/api`).
+- **Backend:** Render. Set `CLIENT_URL` to the Vercel URL so CORS allows it.
