@@ -43,7 +43,10 @@ function useRefreshDoctors() {
   return () =>
     Promise.all([
       qc.invalidateQueries({ queryKey: ["doctors"] }),
+      qc.invalidateQueries({ queryKey: ["doctor"] }),
       qc.invalidateQueries({ queryKey: ["doctor-filters"] }),
+      qc.invalidateQueries({ queryKey: ["patients"] }),
+      qc.invalidateQueries({ queryKey: ["doctor-patients"] }),
       qc.invalidateQueries({ queryKey: ["dashboard"] }),
     ]);
 }
@@ -70,5 +73,22 @@ export function useDeleteDoctor() {
   return useMutation({
     mutationFn: async (id: string) => (await api.delete(`/doctors/${id}`)).data,
     onSuccess: refresh,
+  });
+}
+
+export function useDoctor(id: string) {
+  return useQuery({
+    queryKey: ["doctor", id],
+    queryFn: async () => (await api.get<Doctor>(`/doctors/${id}`)).data,
+    enabled: !!id,
+  });
+}
+
+export function useDoctorOptions() {
+  return useQuery({
+    queryKey: ["doctors", "options"],
+    queryFn: async () =>
+      (await api.get<Paginated<Doctor>>("/doctors", { params: { limit: 50 } })).data.items,
+    staleTime: 5 * 60_000,
   });
 }
