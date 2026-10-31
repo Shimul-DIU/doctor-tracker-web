@@ -21,8 +21,13 @@ function Actions({ doctor, onEdit, onDelete }: Pick<Props, "onEdit" | "onDelete"
       <Button size="sm" variant="ghost" onClick={() => onEdit(doctor)} aria-label={`Edit ${doctor.name}`}>
         <Pencil size={15} />
       </Button>
-      <Button size="sm" variant="ghost" onClick={() => onDelete(doctor)} aria-label={`Delete ${doctor.name}`}
-        className="text-red-600 hover:bg-red-50">
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => onDelete(doctor)}
+        aria-label={`Delete ${doctor.name}`}
+        className="text-red-600 hover:bg-red-50"
+      >
         <Trash2 size={15} />
       </Button>
     </div>

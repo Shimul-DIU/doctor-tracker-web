@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, type ReactNode } from "react";
 import Link from "next/link";
 import { Pencil, Phone, Trash2 } from "lucide-react";
 import Button from "@/components/ui/Button";
@@ -14,7 +14,7 @@ interface Props {
   showDoctor?: boolean;
   onEdit?: (patient: Patient) => void;
   onDelete: (patient: Patient) => void;
-  emptyAction?: React.ReactNode;
+  emptyAction?: ReactNode;
 }
 
 const getDoctor = (p: Patient) => (typeof p.doctor === "object" ? p.doctor : null);
