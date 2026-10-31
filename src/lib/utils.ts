@@ -23,3 +23,9 @@ export function lastNDays(n: number): string[] {
   }
   return out;
 }
+
+export function cleanParams<T extends object>(obj: T) {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== "" && v !== undefined && v !== null)
+  );
+}
