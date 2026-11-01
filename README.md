@@ -2,7 +2,7 @@
 
 Doctor Tracker Web is the frontend of a secure admin portal for managing doctors and their patients. Authenticated admins can create and browse doctors, manage the patients assigned to each doctor, and explore the data through server-side search, filters and pagination, plus a dashboard with interactive charts (totals, patients per doctor, date-wise trends). It talks to a standalone REST API built with Express and MongoDB.
 
-- **Live site:** https://<your-app>.vercel.app
+- **Live site:** https://doctor-tracker-web-cxf4-sable.vercel.app
 - **Live API:** https://doctor-tracker-api-cnxs.onrender.com
 - **Backend repo:** https://github.com/Shimul-DIU/doctor-tracker-api
 
@@ -12,49 +12,29 @@ Doctor Tracker Web is the frontend of a secure admin portal for managing doctors
 
 | Email | Password |
 |---|---|
-| admin@doctortracker.com | Admin@12345 |
+| admin@doctortracker.com | Dt@Demo2026!x |
 
-## Tech stack
-
-Next.js (App Router) · TypeScript · Tailwind CSS · TanStack Query · Zustand · React Hook Form + Zod · Recharts · Axios
+**Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · TanStack Query · Zustand · React Hook Form + Zod · Recharts · Axios
 
 ## Setup guide
 
-**Prerequisites:** Node.js 20.19 or newer, and the backend API running locally or deployed.
+**Prerequisites:** Node.js 20.19+ and the backend API running locally or deployed.
 
-1. Clone the repository
-   ```bash
-   git clone https://github.com/Shimul-DIU/doctor-tracker-web.git
-   cd doctor-tracker-web
-   ```
-2. Install dependencies
-   ```bash
-   npm install
-   ```
-3. Create your environment file from the example
-   ```bash
-   cp .env.example .env.local
-   ```
-4. Set the API URL in `.env.local`
-   ```env
-   NEXT_PUBLIC_API_URL=http://localhost:5000/api
-   ```
-5. Start the dev server
-   ```bash
-   npm run dev
-   ```
-6. Open http://localhost:3000 and sign in with the demo credentials.
+```bash
+git clone https://github.com/Shimul-DIU/doctor-tracker-web.git
+cd doctor-tracker-web
+npm install
+cp .env.example .env.local
+npm run dev              # http://localhost:3000
+```
 
-To run the backend locally, follow the setup guide in the [API repository](https://github.com/Shimul-DIU/doctor-tracker-api) (`npm run seed` creates the admin user and demo data).
+`.env.example`:
 
-### Scripts
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+```
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Start the development server |
-| `npm run build` | Create a production build |
-| `npm start` | Run the production build |
-| `npm run lint` | Lint the code |
+To run the backend locally, follow the setup guide in the [API repository](https://github.com/Shimul-DIU/doctor-tracker-api) (`npm run seed` creates the admin user and demo data). `npm run build` creates a production build.
 
 ## System architecture
 
@@ -65,19 +45,15 @@ flowchart LR
     A -- Mongoose --> M[(MongoDB Atlas)]
 ```
 
-**Data flow**
-
-1. The admin signs in. The API verifies the credentials and returns a signed JWT.
-2. The token is stored in a persisted Zustand store. An Axios interceptor attaches it to every request, and a 401 response logs the user out and redirects to `/login`.
+1. The admin signs in and the API returns a signed JWT.
+2. The token lives in a persisted Zustand store. An Axios interceptor attaches it to every request; a 401 response logs the user out and redirects to `/login`.
 3. Pages read data through TanStack Query hooks, which cache responses and refetch only when the query key changes.
-4. Search, filters and pagination are sent as query parameters. MongoDB does the work using text and compound indexes, and only one page of results returns to the browser.
+4. Search (debounced), filters and pagination go to the API as query parameters, so the database does the work and only one page of results reaches the browser.
 5. The dashboard calls a single stats endpoint that aggregates everything on the database side.
-
-**Frontend structure**
 
 ```
 src/
-├─ app/          routes (login, and a protected (app) group for dashboard, doctors, patients)
+├─ app/          login route and a protected (app) group: dashboard, doctors, patients
 ├─ components/   AppShell, Providers, reusable ui/ pieces, feature components
 ├─ hooks/        data-fetching hooks (React Query) and utilities
 ├─ lib/          Axios instance and helpers
@@ -88,12 +64,10 @@ src/
 ## Technical decisions
 
 ### 1. TanStack Query for server state, Zustand only for auth
-
-Most state in this app is server data: lists, pages, filters and statistics. Putting it in Redux would mean writing actions, reducers and loading/error handling by hand. TanStack Query provides caching, request deduplication, background refetching and cache invalidation after mutations (for example, adding a patient refreshes the doctor's patient list and the dashboard). That also avoids unnecessary re-renders. The only real client state is the auth session, which is small enough for a minimal Zustand store with persistence, so Redux would add boilerplate without a benefit.
+Almost all state here is server data (lists, pages, filters, statistics). Redux would need hand-written actions, reducers and loading/error handling for it. TanStack Query gives caching, request deduplication and cache invalidation after mutations (adding a patient refreshes the doctor's patient list and the dashboard) with far less code and fewer unnecessary re-renders. The only real client state is the auth session, which a small persisted Zustand store handles.
 
 ### 2. Bearer JWT instead of an httpOnly cookie
-
-The frontend (Vercel) and the API (Render) live on different domains. Cross-site cookies need `SameSite=None; Secure` and are blocked by default in several browsers, including Safari, which makes sessions unreliable. A JWT sent in the `Authorization` header works the same everywhere. The trade-off is that a token in `localStorage` is exposed if an XSS bug exists. This is mitigated by React's output escaping, no `dangerouslySetInnerHTML`, a short token lifetime (1 day) and server-side validation. With a shared parent domain, httpOnly cookies would be the better choice.
+The frontend (Vercel) and the API (Render) are on different domains, and cross-site cookies are blocked by default in several browsers, including Safari. A token in the `Authorization` header works everywhere. Trade-off: a token in `localStorage` is exposed if an XSS bug exists, mitigated by React's output escaping, no `dangerouslySetInnerHTML`, a 1-day token lifetime and server-side validation. On a shared parent domain, httpOnly cookies would be the better choice.
 
 ## Screenshots
 
@@ -115,5 +89,5 @@ The frontend (Vercel) and the API (Render) live on different domains. Cross-site
 
 ## Deployment
 
-- **Frontend:** Vercel. Set `NEXT_PUBLIC_API_URL` to the live API URL (ending in `/api`).
-- **Backend:** Render. Set `CLIENT_URL` to the Vercel URL so CORS allows it.
+- **Frontend:** Vercel, with `NEXT_PUBLIC_API_URL` set to the live API URL (ending in `/api`).
+- **Backend:** Render, with `CLIENT_URL` set to the Vercel URL so CORS allows it.
